@@ -191,22 +191,30 @@ define([
             }
         },
         sendTokenCryptoTransaction: function () {
-            // Use BigNumber
             let self = this;
             let ten = this.web3client.utils.toBN(10);
-            let decimals = this.web3client.utils.toBN(18);
-            let amount = this.web3client.utils.toBN(this.orderAmount);
-            let value = amount.pow(decimals);
-
+            let amount = parseFloat(this.orderAmount); // Order amount as a floating-point number
+        
             this.contract.methods.decimals().call(function(error, d) {
-                console.log("decimals:",error,d);
-
-                //calculate actual tokens amounts based on decimals in token
-                let tokens=web3.utils.toBN("0x"+(self.orderAmount*10**d).toString(16)).toString();
-
-                //call mint function
+                if (error) {
+                    console.error("Error fetching decimals:", error);
+                    return;
+                }
+        
+                console.log("Token decimals:", d);
+        
+                // Convert decimals from string to a BN
+                let tokenDecimals = self.web3client.utils.toBN(d);
+        
+                // Scale the amount by 10^decimals to convert to the smallest unit (e.g., wei)
+                let scaledAmount = (amount * Math.pow(10, d)).toString(); // Convert to string
+                let value = self.web3client.utils.toBN(scaledAmount); // Convert to BN
+        
+                console.log("Token amount (in base units):", value.toString());
+        
+                // Use 'value' in the transaction
                 self.contract.methods
-                    .transfer(self.merchantAddress, tokens)
+                    .transfer(self.merchantAddress, value.toString())
                     .send(
                         {
                             from: self.getCurrentAccount()
@@ -220,15 +228,9 @@ define([
                     .catch(function(errObj) {
                         self.showMessage('Transaction is declined by client. ' + errObj.code + ': ' + errObj.message);
                     });
-
-                // mint(address,tokens).send({from:address},function(error,transactionHash){
-                //     //show result
-                //     console.log(error,transactionHash);
-                //     callback(transactionHash);
-                // });
             });
         },
-//         /** send metamask transaction **/
+       /** send metamask transaction **/
         sendRawCryptoTransaction: function() {
             if (!this.isWeb3()) {
                 return;
